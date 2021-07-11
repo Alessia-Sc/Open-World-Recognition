@@ -80,7 +80,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, features=False):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -92,13 +92,22 @@ class ResNet(nn.Module):
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         
-        if features:
-            x = x / x.norm()  #estrazione features, vedere se normalizzare o no, non c'è il FC perché in ICARL faccio il classificatore a mano
-        else:
-            x = self.fc(x)   #classificazione
+        x = self.fc(x)   #classificazione
 
         return x
 
+    def get_feat_ext(self,x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        return x
 
 def resnet32(pretrained=False, **kwargs):
     n = 5
