@@ -213,3 +213,10 @@ def resnet18_cbam(pretrained=False, **kwargs):
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
     return model
 
+
+def resnet50(pretrained=False,**kwargs):
+    model = ResNet(Bottleneck, [3,4,6,3], **kwargs)
+    return model
+
+        
+        
