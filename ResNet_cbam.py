@@ -7,21 +7,23 @@ import math
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
 
-    def conv3x3(in_planes, out_planes, stride=1):
-        "3x3 convolution with padding"
-        return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+def conv3x3(in_planes, out_planes, stride=1):
+    "3x3 convolution with padding"
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
 class ChannelAttention(nn.Module):
-    def init(self, in_planes, ratio=16):
-        super(ChannelAttention, self).init()
+    def __init__(self, in_planes, ratio=16):
+        super(ChannelAttention, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
         self.sequential = nn.Sequential(
+                   
         Flatten(),
         nn.Linear(in_planes, in_planes // 16, bias=False),
         nn.ReLU(),
@@ -34,8 +36,8 @@ class ChannelAttention(nn.Module):
         return F.sigmoid( out ).unsqueeze(2).unsqueeze(3).expand_as(x)
 
 class SpatialAttention(nn.Module):
-    def init(self, kernel_size=7):
-        super(SpatialAttention, self).init()
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention, self).__init__()
 
         assert kernel_size in (3, 7), 'kernel size must be 3 or 7'
         padding = 3 if kernel_size == 7 else 1
@@ -44,8 +46,11 @@ class SpatialAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        #print('输入的shape为:'+str(x.shape))
         avg_out = torch.mean(x, dim=1, keepdim=True)
+        #print('avg_out的shape为:' + str(avg_out.shape))
         max_out, _ = torch.max(x, dim=1, keepdim=True)
+        #print('max_out的shape为:' + str(max_out.shape))
         x = torch.cat([avg_out, max_out], dim=1)
         x = self.conv1(x)
         return self.sigmoid(x)
@@ -53,16 +58,16 @@ class SpatialAttention(nn.Module):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def init(self, inplanes, planes, stride=1, downsample=None):
-        super(BasicBlock, self).init()
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
 
-        self.ca = ChannelAttention(planes)
-        self.sa = SpatialAttention()
+       self.ca = ChannelAttention(planes)
+       self.sa = SpatialAttention()
 
         self.downsample = downsample
         self.stride = stride
@@ -78,8 +83,8 @@ class BasicBlock(nn.Module):
         out = self.bn2(out)
 
         
-        out = self.ca(out) * out
-        out = self.sa(out) * out
+       out = self.ca(out) * out
+       out = self.sa(out) * out
 
         if self.downsample is not None:
             residual = self.downsample(x)
@@ -88,13 +93,13 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
-    
-    
+
+
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def init(self, inplanes, planes, stride=1, downsample=None):
-        super(Bottleneck, self).init()
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -134,17 +139,15 @@ class Bottleneck(nn.Module):
         out = self.relu(out)
 
         return out
-    
-    
-    
+
+
 class ResNet(nn.Module):
 
-    def init(self, block, layers, num_classes):
+    def __init__(self, block, layers, num_classes=100):
         self.inplanes = 64
-        self.num_classes=num_classes
-        super(ResNet, self).init()
+        super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1,
-                                bias=False)
+                               bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(block, 64, layers[0])
@@ -189,31 +192,24 @@ class ResNet(nn.Module):
         x = self.layer4(x)
         x = self.feature(x)
         x = x.view(x.size(0), -1)
-        x = self.fc(x)   #classificazione
-
+        x = self.fc(x)
         return x
-    
-    
-    def get_feat_ext(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.feature(x)
-        x = x.view(x.size(0), -1)
-        
-        return x
-      
 
+    def get_feat_extract(self, x):
+            x = self.conv1(x)
+            x = self.bn1(x)
+            x = self.relu(x)
+            x = self.layer1(x)
+            x = self.layer2(x)
+            x = self.layer3(x)
+            x = self.layer4(x)
+            x = self.feature(x)
+            x = x.view(x.size(0), -1)
 
-def resnet50(pretrained=False, **kwargs):
-    model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-    return model
+            return x
 
 
 def resnet18_cbam(pretrained=False, **kwargs):
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
     return model
+
