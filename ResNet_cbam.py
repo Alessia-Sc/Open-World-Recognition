@@ -195,7 +195,7 @@ class ResNet(nn.Module):
         x = self.fc(x)
         return x
 
-    def get_feat_extract(self, x):
+    def get_feat_ext(self, x):
             x = self.conv1(x)
             x = self.bn1(x)
             x = self.relu(x)
