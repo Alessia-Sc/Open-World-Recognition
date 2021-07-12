@@ -207,7 +207,7 @@ class ResNet(nn.Module):
 
 
 def resnet32(pretrained=False, **kwargs):
-    model = ResNet(BasicBlock, [5, 5, 5, 5], **kwargs)
+    model = ResNet(BasicBlock, [5, 5, 5], **kwargs)
     return model
 
 
